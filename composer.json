@@ -12,5 +12,6 @@
             "name": "Radek Svitak",
             "email": "rsvitak@seznam.cz"
         }
-    ]
+    ],
+    "minimum-stability": "stable"
 }
