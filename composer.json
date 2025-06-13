@@ -1,0 +1,16 @@
+{
+    "name": "rsvitak/labdoc",
+    "description": "Package for handling Lab docs to meet all requirements (including government's - digitaly signed with certified time stamp)",
+    "type": "library",
+    "require": {
+        "php": ">=7.2.5",
+        "tecnickcom/tcpdf": "^6.10"
+    },
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Radek Svitak",
+            "email": "rsvitak@seznam.cz"
+        }
+    ]
+}

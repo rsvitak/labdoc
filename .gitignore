@@ -1,0 +1,8 @@
+vendor/
+.DS_Store
+composer.lock
+
+#vim tmp and swap files
+.*.sw*
+*~
+
