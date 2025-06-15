@@ -12,5 +12,10 @@
             "name": "Radek Svitak",
             "email": "rsvitak@seznam.cz"
         }
-    ]
+    ],
+    "autoload": {
+      "psr-4": {
+         "rsvitak\\labdoc\\": "src/"
+      }
+   }
 }

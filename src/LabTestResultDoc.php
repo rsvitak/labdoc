@@ -1,6 +1,6 @@
 <?php
 
-namespace rsvitak\LabPdf;
+namespace rsvitak\labdoc;
 
 class LabTestResultDoc {
     private $domain;

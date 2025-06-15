@@ -1,11 +1,11 @@
 <?php
 
-namespace rsvitak\LabPdf;
+namespace rsvitak\labdoc;
 
 use tecnickcom\TCPDF;
 
 // Extend the TCPDF class to create custom Header and Footer
-class LabPdf extends \TCPDF {
+class LabPdf extends TCPDF {
     private $opts=[];
 
     private $logo=null;
