@@ -5,17 +5,16 @@ namespace rsvitak\labdoc;
 use tecnickcom\TCPDF;
 
 // Extend the TCPDF class to create custom Header and Footer
-class LabPdf extends TCPDF {
+class LabPdf extends \TCPDF {
     private $opts=[];
-
+    private $labDoc=null;
+    private $doCache=true;
+    private $doSign=true;
     private $logo=null;
-    private $domain=null;
-    private $fileName;
-    private $useCache=true;
-    private $title;
-    private $subject;
-
-    public function __construct() {
+    private $md5sum=null;
+    private $mtime=null;
+    
+    public function __construct($labDoc) {
         parent::__construct(PDF_PAGE_ORIENTATION, PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
         $labweb=defined('APPLICATION_PATH');
         $this->opts['CACHE_STORAGE']=$labweb ? LABPDF_CACHE_STORAGE : $_ENV['LABPDF_CACHE_STORAGE'];
@@ -27,34 +26,83 @@ class LabPdf extends TCPDF {
         $this->opts['TSA_URL']=$labweb ? TSA_URL : $_ENV['TSA_URL'];
         $this->opts['TSA_USERNAME']=$labweb ? TSA_USERNAME : $_ENV['TSA_USERNAME'];
         $this->opts['TSA_PASSWORD']=$labweb ? TSA_PASSWORD : $_ENV['TSA_PASSWORD'];
+        $this->opts['LOGO_DIR']=$labweb ? APPLICATION_PATH.'httpd/htdocs/images/new/' : $_ENV['LABPDF_LOGO_DIR'];
+
+        $this->labDoc=$labDoc;
+        if ($domain=$this->labDoc->getDomain()) {
+            if ($domain!='LIN') {
+               $this->doCache=false;
+               $this->doSign=false;
+            }
+        } else throw new \Exception('Unable to create LabPdf file due to the missing domain');
+        $this->setLogo(\rtrim($this->opts['LOGO_DIR'], '/').'/logo-'.(\strtolower($domain)).'-sm-cz-hr.png');
+
+        switch ((new \ReflectionClass($this->labDoc))->getShortName()) {
+        case 'LabTestResultDoc':
+            $this->setTitle('Výsledky laboratorního vyšetření');
+            break;
+
+        case 'LabTestRequestDoc':
+            $this->setTitle('Žádanka na laboratorní vyšetření');
+            break;
+
+        default: 
+            $this->setTitle('Laboratorní dokument');
+            break;
+        }//switch
     }
 
-    public function setUseCache($useCache) {
-        $this->useCache=$useCache;
+    public function setDoCache(bool $doCache) {
+        $this->doCache=$doCache;
         return $this;
     }
 
-    public function getOutput($dest='I') {
-        if ($this->useCache && $this->isCached()) {
-            $outputFile=$this->getNameInCacheStorage();
+    public function setDoSign(bool $doSign) {
+        if (!($this->doSign=$doSign)) $this->setDoCache(false);
+        return $this;
+    }
+
+    public function getOutput() {
+        $outputFileUnsigned=$outputFileSigned=null;
+
+        if ($this->doCache && $this->isCached()) {
+            $outputFile=$this->getPathInCacheStorage();
         } else {
             //not cached,, generate the file
-            $outputFileUnsigned=tempnam($this->opts['TEMP_DIR'], '_unsigned_pdf_');
-            $outputFileSigned=$this->useCache ? $this->getNameInCacheStorage() : tempnam($this->opts['TEMP_DIR'], '_signed_pdf_');
-            \mkdir(dirname($outputFileSigned), 0777, true);
+            $outputFileUnsigned=tempnam($this->opts['TEMP_DIR'], '_unsigned_pdf_').'.pdf';
             $tcpdf_output=$this->Output($outputFileUnsigned, 'F');
-            $cmd=$this->opts['JAVA_PATH'].' -jar '.$this->opts['DSS_CLI_APP'].' '.$outputFileUnsigned.' '.$outputFileSigned.' '.$this->opts['LABIN_PKEY_P12'].' '.$this->opts['LABIN_PKEY_P12_PASSWORD'].' '.$this->opts['TSA_URL'].' '.$this->opts['TSA_USERNAME'].' '.$this->opts['TSA_PASSWORD'].' 2>&1';
-            exec($cmd, $dss_cli_app_output, $rc);
-
-            if ($rc!='0') {
-                $labweb=defined('APPLICATION_PATH');
-                if ($labweb) labweb_log($cmd.PHP_EOL.implode(PHP_EOL, $dss_cli_app_output));
-                else dump([$cmd, $dss_cli_app_output]);
-                file_exists($outputFileSigned) && unlink($outputFileSigned);
-                $outputFileSigned=null;
+            if ($this->doSign) {
+               $outputFileSigned=$this->doCache ? $this->getPathInCacheStorage() : tempnam($this->opts['TEMP_DIR'], '_signed_pdf_').'.pdf';
+               \is_dir(dirname($outputFileSigned)) || \mkdir(dirname($outputFileSigned), 0777, true);
+               $cmd=$this->opts['JAVA_PATH'].' -jar '.$this->opts['DSS_CLI_APP'].' '.$outputFileUnsigned.' '.$outputFileSigned.' '.$this->opts['LABIN_PKEY_P12'].' '.$this->opts['LABIN_PKEY_P12_PASSWORD'].' '.$this->opts['TSA_URL'].' '.$this->opts['TSA_USERNAME'].' '.$this->opts['TSA_PASSWORD'].' 2>&1';
+               exec($cmd, $dss_cli_app_output, $rc);
+   
+               if ($rc!='0') {
+                   $labweb=defined('APPLICATION_PATH');
+                   if ($labweb) labweb_log($cmd.PHP_EOL.implode(PHP_EOL, $dss_cli_app_output));
+                   else dump([$cmd, $dss_cli_app_output]);
+                   file_exists($outputFileSigned) && unlink($outputFileSigned);
+                   $outputFileSigned=null;
+               }
+               $outputFile=$outputFileSigned;
+            } else {
+               $outputFile=$outputFileUnsigned;
             }
         }
-        return $outputFileSigned ? ($dest=='F' ? $outputFileSigned : file_get_contents($outputFileSigned)) : null;
+        if ($outputFile) {
+           $result=\file_get_contents($outputFile);
+           $this->md5sum=\md5_file($outputFile);
+           $this->mtime=\date('Y-m-d\TH:i:s', \filemtime($outputFile));
+           $outputFileUnsigned && unlink($outputFileUnsigned);
+           !$this->doCache && $outputFileSigned && unlink($outputFileSigned);
+        } else {
+           $result=null;
+        }
+        return $result;
+    }
+
+    public function getVersionInfo() {
+        return $this->mtime && $this->md5sum ? 'mtime='.$this->mtime.'&md5='.$this->md5sum : '';
     }
 
     public function getTitle() {
@@ -75,24 +123,7 @@ class LabPdf extends TCPDF {
         return $this;
     }
 
-    public function getFileName() {
-        return $this->fileName;
-    }
-
-    public function setFileName($fileName) {
-        $fileName=trim($fileName);
-        $this->fileName=$fileName!=='' ? $fileName : false;
-        return $this;
-    }
-
-    
-    public function setDomain($domain) {
-        $this->domain=$domain;
-        return $this;
-    }
-
     public function setLogo($logo) {
-        //LIN,LABIS: $logo_file=$this->projectDir.'/assets/images/logo-lin-sm-cz-hr.png'; //FIXME: the logo should be somewhere in "etc", "share" or "config" folder?
         $this->logo=$logo;
         return $this;
     }
@@ -102,14 +133,14 @@ class LabPdf extends TCPDF {
        //Logo
         if ($this->logo) {
            $image_file=$this->logo; //FIXME: the logo should be somewhere in "etc", "share" or "config" folder?
-           $this->Image($image_file, 20, 10, 50, '', 'PNG', '', 'T', false, 300, '', false, false, 0, false, false, false);
+           $this->Image($image_file, 20, 10, 0, 15, 'PNG', '', 'T', false, 300, '', false, false, 0, false, false, false);
         }
         // Set font
         $this->SetFont('dejavusans', 'B', 8);
         // Title
         $html='<h1>'.htmlspecialchars($this->getTitle()).'</h1>';
         $this->MultiCell(0, 0, $html, 0, '', false, 0, $this->getX()+10, $this->getY()+5, true, 0, true);
-        //$this->Cell(0, 40, "Výsledky laboratorního vyšetření", 0, false, 'C', 0, '', 0, false, 'M', 'M');
+
     }
 
     // Page footer
@@ -118,7 +149,19 @@ class LabPdf extends TCPDF {
         $this->SetY(-15);
         // Set font
         $this->SetFont('dejavusans', 'N', 7);
-        $html='Lab&nbsp;In&nbsp;-&nbsp;Institut&nbsp;laboratorní&nbsp;medicíny,&nbsp;s.r.o., IČ:&nbsp;25230271, Blahoslavova&nbsp;18/5, 360&nbsp;01&nbsp;Karlovy Vary<br>Zelená linka&nbsp;800&nbsp;183&nbsp;675, 800&nbsp;100&nbsp;590, tel.&nbsp;353&nbsp;311&nbsp;514<br>e-mail:&nbsp;<a href="mailto:operator@labin.cz">operator@labin.cz</a>, <a href="https://www.labin.cz">www.labin.cz</a>';
+        switch ($this->labDoc->getDomain()) {
+        case 'LIN' :
+            if ($this->labDoc->getIco()=='28005902') {
+                $html='VARAPALO&nbsp;s.r.o., IČ:&nbsp;28005902, nám.&nbsp;Dr.&nbsp;M.&nbsp;Horákové&nbsp;1313/8,&nbsp;360&nbsp;01 Karlovy&nbsp;Vary<br>Zelená linka&nbsp;800&nbsp;183&nbsp;675<br>e-mail:&nbsp;<a href="mailto:operator@labin.cz">operator@labin.cz</a>, www:&nbsp;<a href="https://labin.cz">labin.cz</a>';
+            } else {
+                $html='Lab&nbsp;In&nbsp;-&nbsp;Institut&nbsp;laboratorní&nbsp;medicíny,&nbsp;s.r.o., IČ:&nbsp;25230271, Blahoslavova&nbsp;18/5, 360&nbsp;01&nbsp;Karlovy&nbsp;Vary<br>Zelená linka&nbsp;800&nbsp;183&nbsp;675, 800&nbsp;100&nbsp;590, tel.&nbsp;353&nbsp;311&nbsp;514<br>e-mail:&nbsp;<a href="mailto:operator@labin.cz">operator@labin.cz</a>, www:&nbsp;<a href="https://labin.cz">labin.cz</a>';
+            }
+            break;
+
+        case 'CTL' : 
+            $html='CITYLAB&nbsp;s.r.o., IČ:&nbsp;28442156, Seydlerova&nbsp;2451/8, 158&nbsp;00&nbsp;Praha&nbsp;5<br>Zelená linka&nbsp;800&nbsp;801&nbsp;811,<br>e-mail:&nbsp;<a href="mailto:citylab@citylab.cz">citylab@citylab.cz</a>, www:&nbsp;<a href="https://citylab.cz/">citylab.cz</a>';
+            break;
+        }//switch
         //$this->Cell(0, 0, "Lab In - Institut laboratorní medicíny, s.r.o., Bezručova 10, 360 01 Karlovy Vary\nZelená linka 800 183 675, 800 100 590, tel. 353 311 514\ne-mail: operator@labin.cz, www.labin.cz", 0, false, 'C', 0, '', 0, false, 'T', 'M');
         $this->MultiCell(150, 0, $html, 0, 'C', false, 0, null, null, true, 0, true);
 
@@ -127,7 +170,9 @@ class LabPdf extends TCPDF {
         // print a blox of text using multicell()
     }
 
-   protected function loadHtml($html) {
+    public function loadHtml($html) {
+      if (trim($html)=='') return;
+
       // set document information
       $this->SetCreator(PDF_CREATOR);
       $this->SetAuthor('Lab In - Institut laboratorní medicíny'); //FIXME
@@ -147,19 +192,27 @@ class LabPdf extends TCPDF {
       $this->SetAutoPageBreak(TRUE, PDF_MARGIN_BOTTOM);
 
       // set image scale factor
-      $this->setImageScale(PDF_IMAGE_SCALE_RATIO);
+      $this->setImageScale(2);//PDF_IMAGE_SCALE_RATIO);
  
       $this->SetFont('dejavusans', '', 10, '', false);
 
       //https://github.com/tecnickcom/TCPDF/issues/239
+      //equals to { padding:0; margin:0 }
       $tagvs=[
-         'p'=>[0=>['h'=>0, 'n'=> 0], 1=>['h' => 0, 'n' => 0]],
-         'div'=>[0=>['h'=>0, 'n'=> 0], 1=>['h' => 0, 'n' => 0]],
-         'table'=>[0=>['h'=>0, 'n'=> 0], 1=>['h' => 0, 'n' => 0]],
-         'tr'=>[0=>['h'=>0, 'n'=> 0], 1=>['h' => 0, 'n' => 0]],
-         'td'=>[0=>['h'=>0, 'n'=> 0], 1=>['h' => 0, 'n' => 0]],
+         'p'=>    [['h'=>0, 'n'=> 0], ['h' => 0, 'n' => 0]],
+         'div'=>  [['h'=>0, 'n'=> 0], ['h' => 0, 'n' => 0]],
+         'table'=>[['h'=>0, 'n'=> 0], ['h' => 0, 'n' => 0]],
+         'tr'=>   [['h'=>0, 'n'=> 0], ['h' => 0, 'n' => 0]],
+         'td'=>   [['h'=>0, 'n'=> 0], ['h' => 0, 'n' => 0]],
+         'span'=> [['h'=>0, 'n'=> 0], ['h' => 0, 'n' => 0]],
+         'h1'=>   [['h'=>0, 'n'=> 0], ['h' => 0, 'n' => 0]],
+         'h2'=>   [['h'=>0, 'n'=> 0], ['h' => 0, 'n' => 0]],
+         'h3'=>   [['h'=>0, 'n'=> 0], ['h' => 0, 'n' => 0]],
+         'h4'=>   [['h'=>0, 'n'=> 0], ['h' => 0, 'n' => 0]],
       ];
       $this->setHtmlVSpace($tagvs);
+
+      $this->setListIndentWidth(0);
 
       // add a page
       $this->AddPage();
@@ -186,22 +239,38 @@ class LabPdf extends TCPDF {
       ///$this->addEmptySignatureAppearance($x, $y, 15, 15);
 
       // ---------------------------------------------------------
+      return $this;
    }
 
 
-    protected function getNameInCacheStorage() {
-        if ($this->getFileName()) {
+    public function getPathInCacheStorage() {
+        if ($this->labDoc->getFileName() && $this->labDoc->getBaseDate()) {
+            if (!$this->doCache) return $this->labDoc->getFileName();
+            $baseDir=\rtrim($this->opts['CACHE_STORAGE'], '/');
+            /*
             $hash=md5($this->getFileName());
             $dir1=substr($hash, 0, 2);
             $dir2=substr($hash, 2, 2);
-            $baseDir=$this->cacheStorage;
             return $baseDir.'/'.$dir1.'/'.$dir2.'/'.$this->getFileName();
-        }
-        return null;
+             */
+            switch ((new \ReflectionClass($this->labDoc))->getShortName()) {
+            case 'LabTestResultDoc':
+               $typeSubDir='vysledky';
+               break;
+            case 'LabTestRequestDoc':
+               $typeSubDir='zadanky';
+               break;
+            default: 
+               $typeSubDir='ostatni';
+               break;
+            }//switch
+            return $baseDir.'/'.$this->labDoc->getBaseDate()->format('Y/m/d').'/'.$typeSubDir.'/'.$this->labDoc->getFileName();
+        } 
+        throw new \Exception('Missing data to generate storage path');
     }
 
-    protected function isCached() {
-        return (($file=$this->getNameInCacheStorage()) && file_exists($file));
+    public function isCached() {
+        return $this->doCache && $this->doSign && ($file=$this->getPathInCacheStorage()) && file_exists($file);
     }
 
     protected static function stamp_hepnar($base64data_only=false) {
