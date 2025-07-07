@@ -1,7 +1,68 @@
 <?php
-use rsvitak\labdoc\LabPdf;
+/* To get acces to the symfony user provider, it is neccessary to pass the security object to the LabDoc
+ * it can be done manually eachtime the LabDoc is created or such src/EventSubscriber/LabDocEventSubscriber.php can be used:
+ *
+ *
+ * <?php
+
+namespace App\EventSubscriber;
+
+use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+use Symfony\Component\HttpKernel\Event\RequestEvent;
+use Symfony\Component\Security\Core\Security;
+use rsvitak\labdoc\LabDoc;
+
+class LabDocEventSubscriber implements EventSubscriberInterface
+{
+    private $security; 
+
+    public function __construct(Security $security) {
+        $this->security=$security;
+    }
+
+    public function onKernelRequest(RequestEvent $event): void
+    {
+        LabDoc::setDefaultUserProvider($this->security);
+    }
+
+    public static function getSubscribedEvents(): array
+    {
+        return [
+            'kernel.request' => 'onKernelRequest',
+        ];
+    }
+}
+
+
+
+If someday I need the subscriber in multiple Symfony projects, create a tiny second repo:
+
+labdoc-symfony-bridge/
+└── src/
+    └── EventSubscriber/
+        └── LabDocUserSubscriber.php
+
+composer.json of that bridge would require both:
+
+{
+  "name": "rsvitak/labdoc-symfony-bridge",
+  "require": {
+    "rsvitak/labdoc": "^1.0",
+    "symfony/event-dispatcher": "^6.0",
+    "symfony/security-core": "^6.0"
+  },
+  "autoload": {
+    "psr-4": { "Labdoc\\Bridge\\Symfony\\": "src/" }
+  }
+}
+*
+*
+*/
 
 namespace rsvitak\labdoc;
+
+use rsvitak\labdoc\LabPdf;
+use Symfony\Component\Security\Core\Security;
 
 abstract class LabDoc {
     private $domain;
@@ -9,6 +70,7 @@ abstract class LabDoc {
     private $fileName;
     private $baseDate;
     private $accessInfo;
+    static private $defaultProvider;
 
     public function getDomain() : string {
         return $this->domain;
@@ -60,6 +122,13 @@ abstract class LabDoc {
         return $this;
     }
 
+    /** **GLOBAL** setter; call this once during bootstrap */
+    public static function setDefaultUserProvider(Security $p): void
+    {
+        self::$defaultProvider = $p;
+    }
+
+
     abstract public function getData(string $format);
 
     private function accessLog($outputInfo) {
@@ -68,7 +137,7 @@ abstract class LabDoc {
         } else {
             $requestInfo=$_SERVER['SERVER_NAME'].$_SERVER['REQUEST_URI']; 
         }
-        $accessLogRecord=\date('Y-m-d\TH:i:s').' '.$outputInfo.' '.$requestInfo.' '.$this->getAccessInfo().PHP_EOL;
+        $accessLogRecord=(new \DateTime(null, new \DateTimeZone('Europe/Prague')))->format('Y-m-d\TH:i:s').' '.$outputInfo.' '.$requestInfo.' '.$this->getAccessInfo().PHP_EOL;
         $accessLogFile=defined('APPLICATION_PATH') ? APPLICATION_PATH_LOG.'/labdoc_access.log' : $_ENV['LABDOC_ACCESS_LOG'];
         file_put_contents($accessLogFile, $accessLogRecord, FILE_APPEND);
     }
@@ -80,11 +149,11 @@ abstract class LabDoc {
                 if (defined('APPLICATION_PATH')) {
                     $accessInfo='is=labweb'.(\php_sapi_name()!='cli' ? '&username='.\get_fir().'.'.\get_username().'&guid='.\get_guid().'&remote_addr='.$_SERVER['REMOTE_ADDR'] : '&user='.$_SERVER['USER']);
                 } else {
-                    //FIXME!!! $this->getUser will definitelly not work!!!!!!!
-                    $accessInfo='is=LabIs'.(\php_sapi_name()!='cli' ? '&username='.($this->getUser() ? $this->getUser()->getDomain()->getId().'.'.$this->getUser()->getUserIdentifier().'&id='.$this->getUser()->getId().'&remote_addr='.$_SERVER['REMOTE_ADDR'] : '') : '&user='.$_SERVER['user']);
+                    $user=(self::$defaultProvider) ? self::$defaultProvider->getUser() : null;
+                    $accessInfo='is=LabIs'.(\php_sapi_name()!='cli' ? '&username='.($user ? $user->getDomain()->getId().'.'.$user->getNickName().'&id='.$user->getId().'&remote_addr='.$_SERVER['REMOTE_ADDR'] : '') : '&user='.$_SERVER['user']);
                 }
             } catch (\Throwable $t) {
-               $accessInfo='???';
+               $accessInfo='?userProvider=N/A';
             }
         }
         $this->addAccessInfo($accessInfo);

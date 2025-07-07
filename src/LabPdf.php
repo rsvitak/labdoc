@@ -92,7 +92,7 @@ class LabPdf extends \TCPDF {
         if ($outputFile) {
            $result=\file_get_contents($outputFile);
            $this->md5sum=\md5_file($outputFile);
-           $this->mtime=\date('Y-m-d\TH:i:s', \filemtime($outputFile));
+           $this->mtime=(new \DateTime('@'.\filemtime($outputFile)))->setTimezone(new \DateTimeZone('Europe/Prague'))->format('Y-m-d\TH:i:s');
            $outputFileUnsigned && unlink($outputFileUnsigned);
            !$this->doCache && $outputFileSigned && unlink($outputFileSigned);
         } else {
@@ -132,6 +132,7 @@ class LabPdf extends \TCPDF {
     public function header() {
        //Logo
         if ($this->logo) {
+        dump($this->logo);
            $image_file=$this->logo; //FIXME: the logo should be somewhere in "etc", "share" or "config" folder?
            $this->Image($image_file, 20, 10, 0, 15, 'PNG', '', 'T', false, 300, '', false, false, 0, false, false, false);
         }

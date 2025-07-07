@@ -26,7 +26,7 @@ class LabTestResultDoc extends LabDoc {
         if ($class_name=='LabTestResult') { //LABIS
             $this->setDomain($labTestResult->getDomain());
             $this->xml=$labTestResult->getXml();
-            $this->datdu=$labTestResult->getSampleAt();
+            $this->datdu=\DateTime::createFromImmutable($labTestResult->getSampleAt());
             $this->hcContractId=$labTestResult->getHcContractId();
             $this->pmZip=trim($labTestResult->getDepartment()->getZip());
             $this->pmATitle=$labTestResult->getDepartment()->getAtitle();
