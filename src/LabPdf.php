@@ -132,7 +132,6 @@ class LabPdf extends \TCPDF {
     public function header() {
        //Logo
         if ($this->logo) {
-        dump($this->logo);
            $image_file=$this->logo; //FIXME: the logo should be somewhere in "etc", "share" or "config" folder?
            $this->Image($image_file, 20, 10, 0, 15, 'PNG', '', 'T', false, 300, '', false, false, 0, false, false, false);
         }
