@@ -466,7 +466,7 @@ EOT;
                if (!empty($vr_extcmnt)) {
                   $result.='   <tr><td class="italic" style="width:20%">Doplňující údaje / komentář:</td><td>'.implode("\n", $vr_extcmnt).'</td></tr>'.PHP_EOL;
                }
-               $result.='   <tr><td class="italic" style="width:20%">Datum a čas tisku:</td><td>'.$doc['printed_date']->format('d/m/Y H:i:s').'</td></tr>'.PHP_EOL;
+               $result.='   <tr><td class="italic" style="width:20%">Datum a čas tisku:</td><td>'.($doc['printed_date'] ? $doc['printed_date']->format('d/m/Y H:i:s'): '').'</td></tr>'.PHP_EOL;
                $result.='   <tr><td class="italic comment" style="width:20%">Primární materiál:</td><td class="comment">'.implode(', ', $primary_materials_list).'</td></tr>'.PHP_EOL;
                $result.='</table>'.PHP_EOL;
 
