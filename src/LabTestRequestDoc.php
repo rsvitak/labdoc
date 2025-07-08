@@ -264,7 +264,7 @@ table.nclptable th {
    font-size:0.9em;
    border:solid 1px black;
 }
-table.layout {
+table[class^="zadanka-print"] {
    width:100%;
    border-collapse:collapse;
    font-size:0.9em;

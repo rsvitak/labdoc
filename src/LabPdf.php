@@ -34,9 +34,12 @@ class LabPdf extends \TCPDF {
                $this->doCache=false;
                $this->doSign=false;
             }
-        } else throw new \Exception('Unable to create LabPdf file due to the missing domain');
-        $this->setLogo(\rtrim($this->opts['LOGO_DIR'], '/').'/logo-'.(\strtolower($domain)).'-sm-cz-hr.png');
-
+            $this->setLogo(\rtrim($this->opts['LOGO_DIR'], '/').'/logo-'.(\strtolower($domain)).'-sm-cz-hr.png');
+        } else {
+           $this->doCache=false;
+           $this->doSign=false;
+        }
+        
         switch ((new \ReflectionClass($this->labDoc))->getShortName()) {
         case 'LabTestResultDoc':
             $this->setTitle('Výsledky laboratorního vyšetření');
@@ -165,6 +168,11 @@ class LabPdf extends \TCPDF {
 
         case 'CTL' : 
             $html='CITYLAB&nbsp;s.r.o., IČ:&nbsp;28442156, Seydlerova&nbsp;2451/8, 158&nbsp;00&nbsp;Praha&nbsp;5<br>Zelená linka&nbsp;800&nbsp;801&nbsp;811,<br>e-mail:&nbsp;<a href="mailto:citylab@citylab.cz">citylab@citylab.cz</a>, www:&nbsp;<a href="https://citylab.cz/">citylab.cz</a>';
+            break;
+
+        default: 
+            //get the footer from the XML
+            $html=htmlspecialchars($this->labDoc->getIssuerAddressFromXml());
             break;
         }//switch
         //$this->Cell(0, 0, "Lab In - Institut laboratorní medicíny, s.r.o., Bezručova 10, 360 01 Karlovy Vary\nZelená linka 800 183 675, 800 100 590, tel. 353 311 514\ne-mail: operator@labin.cz, www.labin.cz", 0, false, 'C', 0, '', 0, false, 'T', 'M');

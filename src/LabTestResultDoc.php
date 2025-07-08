@@ -40,7 +40,7 @@ class LabTestResultDoc extends LabDoc {
             $this->pmCompany=$this->getDomain()=='CTL' ? 'CITYLAB s.r.o' : 'Lab In - Institut laboratorní medicíny, s.r.o.'; //FIXME!!!!!
             $this->clientBornDate=$labTestResult->getBornDate();
         } elseif ($class_name=='lwv') { //LABWEB
-           $lwv=$labTestResult;
+            $lwv=$labTestResult;
             $this->setDomain($lwv->get_domain());
             $this->xml=$lwv->get_xml('PLAIN_TEXT');
             $this->datdu=new \DateTime($lwv->get_attr('XM_DATDU').'T'.((empty($lwv->get_attr('XM_TIMDU'))) ? '00:00:00' : $lwv->get_attr('XM_TIMDU')));
@@ -76,6 +76,16 @@ class LabTestResultDoc extends LabDoc {
         $this->setIco($this->xpath->query('/dasta/is/@ico')->item(0)->nodeValue ?? null);
         $this->setFileName($this->getDefaultFileName());
         $this->setBaseDate($this->datdu);
+    }
+
+    public function getIssuerAddressFromXml() {
+       $a=[
+          'company'=>($this->xpath->query('/dasta/is/a[@typ="O"]/jmeno')[0]->nodeValue ?? ''),
+          'address'=>trim(($this->xpath->query('/dasta/is/a[@typ="O"]/adr')[0]->nodeValue ?? '').', '.($this->xpath->query('/dasta/is/a[@typ="O"]/dop1')[0]->nodeValue ?? '').', '.($this->xpath->query('/dasta/is/a[@typ="O"]/dop2')[0]->nodeValue ?? ''), ', '),
+          'city'=>trim(($this->xpath->query('/dasta/is/a[@typ="O"]/psc')[0]->nodeValue ?? '').' '.($this->xpath->query('/dasta/is/a[@typ="O"]/mesto')[0]->nodeValue ?? '')),
+          'icl'=>($this->xpath->query('/dasta/is/a[@typ="O"]/icl')->length ? 'IČL '.$this->xpath->query('/dasta/is/a[@typ="O"]/icl')[0]->nodeValue : ''),
+       ];
+       return implode('; ', $a);
     }
 
     public function getDefaultFileName() {
