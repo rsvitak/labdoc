@@ -172,7 +172,7 @@ class LabPdf extends \TCPDF {
 
         default: 
             //get the footer from the XML
-            $html=htmlspecialchars($this->labDoc->getIssuerAddressFromXml());
+            $html=implode('; ', array_map(function ($segment) { return preg_replace('/\s+/', '&nbsp;', htmlspecialchars($segment)); }, $this->labDoc->getIssuerAddressFromXml()));
             break;
         }//switch
         //$this->Cell(0, 0, "Lab In - Institut laboratorní medicíny, s.r.o., Bezručova 10, 360 01 Karlovy Vary\nZelená linka 800 183 675, 800 100 590, tel. 353 311 514\ne-mail: operator@labin.cz, www.labin.cz", 0, false, 'C', 0, '', 0, false, 'T', 'M');

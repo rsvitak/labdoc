@@ -85,7 +85,7 @@ class LabTestResultDoc extends LabDoc {
           'city'=>trim(($this->xpath->query('/dasta/is/a[@typ="O"]/psc')[0]->nodeValue ?? '').' '.($this->xpath->query('/dasta/is/a[@typ="O"]/mesto')[0]->nodeValue ?? '')),
           'icl'=>($this->xpath->query('/dasta/is/a[@typ="O"]/icl')->length ? 'IČL '.$this->xpath->query('/dasta/is/a[@typ="O"]/icl')[0]->nodeValue : ''),
        ];
-       return implode('; ', $a);
+       return $a;
     }
 
     public function getDefaultFileName() {
