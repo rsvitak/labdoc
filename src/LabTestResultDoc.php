@@ -73,7 +73,7 @@ class LabTestResultDoc extends LabDoc {
         $this->dom->loadXML($this->xml);
         $this->xpath=new \DOMXpath($this->dom);
 
-        $this->setIco($this->xpath->query('/dasta/is/@ico')->item(0)->nodeValue ?? null);
+        $this->setIco($this->xpath->query('/dasta/is/@ico')->item(0)->nodeValue ?? '');
         $this->setFileName($this->getDefaultFileName());
         $this->setBaseDate($this->datdu);
     }
