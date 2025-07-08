@@ -73,9 +73,14 @@ class LabPdf extends \TCPDF {
             $tcpdf_output=$this->Output($outputFileUnsigned, 'F');
             if ($this->doSign) {
                $outputFileSigned=$this->doCache ? $this->getPathInCacheStorage() : tempnam($this->opts['TEMP_DIR'], '_signed_pdf_').'.pdf';
-               \is_dir(dirname($outputFileSigned)) || \mkdir(dirname($outputFileSigned), 0777, true);
+               if (!is_dir(dirname($outputFileSigned))) {
+                  $old_umask=umask(0);
+                  \mkdir(dirname($outputFileSigned), 0775, true);
+                  umask($old_umask);
+               }
                $cmd=$this->opts['JAVA_PATH'].' -jar '.$this->opts['DSS_CLI_APP'].' '.$outputFileUnsigned.' '.$outputFileSigned.' '.$this->opts['LABIN_PKEY_P12'].' '.$this->opts['LABIN_PKEY_P12_PASSWORD'].' '.$this->opts['TSA_URL'].' '.$this->opts['TSA_USERNAME'].' '.$this->opts['TSA_PASSWORD'].' 2>&1';
                exec($cmd, $dss_cli_app_output, $rc);
+               \chmod($outputFileSigned, 0664);
    
                if ($rc!='0') {
                    $labweb=defined('APPLICATION_PATH');
