@@ -133,7 +133,7 @@ abstract class LabDoc {
 
     private function accessLog($outputInfo) {
         if (\php_sapi_name()=='cli') {
-            $requestInfo=$_SERVER['HOSTNAME'].':'.$_SERVER['SCRIPT_NAME'];
+            $requestInfo=(isset($_SERVER['HOSTNAME']) ? $_SERVER['HOSTNAME'] : \gethostname()).':'.$_SERVER['SCRIPT_NAME'];
         } else {
             $requestInfo=$_SERVER['SERVER_NAME'].$_SERVER['REQUEST_URI']; 
         }
