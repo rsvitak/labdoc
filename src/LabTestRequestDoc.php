@@ -33,7 +33,6 @@ class LabTestRequestDoc extends LabDoc {
              $this->lab_test_request->get_attr('filename'),
         ];
         if ($this->nclpListHidden) $filenameSegments[]='H';
-        TRACE($filenameSegments);
         return $this->getFilenameSafeString(implode('_', $filenameSegments).'.pdf', false);
     }
 
