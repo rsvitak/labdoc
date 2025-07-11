@@ -131,18 +131,19 @@ abstract class LabDoc {
 
     abstract public function getData(string $format);
 
-    private function accessLog($outputInfo) {
+    private function accessLog($outputInfo, $accessTime=null) {
         if (\php_sapi_name()=='cli') {
             $requestInfo=(isset($_SERVER['HOSTNAME']) ? $_SERVER['HOSTNAME'] : \gethostname()).':'.$_SERVER['SCRIPT_NAME'];
         } else {
             $requestInfo=$_SERVER['SERVER_NAME'].$_SERVER['REQUEST_URI']; 
         }
-        $accessLogRecord=(new \DateTime(null, new \DateTimeZone('Europe/Prague')))->format('Y-m-d\TH:i:s').' '.$outputInfo.' '.$requestInfo.' '.$this->getAccessInfo().PHP_EOL;
+        $accessLogRecord=($accessTime===null ? (new \DateTime(null, new \DateTimeZone('Europe/Prague'))) : $accessTime)->format('Y-m-d\TH:i:s').' '.$outputInfo.' '.$requestInfo.' '.$this->getAccessInfo().PHP_EOL;
         $accessLogFile=defined('APPLICATION_PATH') ? APPLICATION_PATH_LOG.'/labdoc_access.log' : $_ENV['LABDOC_ACCESS_LOG'];
         file_put_contents($accessLogFile, $accessLogRecord, FILE_APPEND);
     }
 
     public function getOutput($format='pdf', $accessInfo=null) {
+        $accessTime=new \DateTime(null, new \DateTimeZone('Europe/Prague'));
         $format=strtolower(trim($format));
         if ($accessInfo===null) {
             try {
@@ -165,18 +166,18 @@ abstract class LabDoc {
             }
             if ($labPdf->isCached()) {
                 $outputPdf=$labPdf->getOutput();
-                $this->addAccessInfo($labPdf->getVersionInfo())->accessLog($labPdf->getPathInCacheStorage());
+                $this->addAccessInfo($labPdf->getVersionInfo())->accessLog($labPdf->getPathInCacheStorage(), $accessTime);
             } else {
                $htmlData=$this->getData('html');
                //file_put_contents('/home/radek/tmp/test.htm', $data);
                $labPdf->loadHtml($htmlData);
                $outputPdf=$labPdf->getOutput();
-               $this->addAccessInfo($labPdf->getVersionInfo())->accessLog($labPdf->getPathInCacheStorage());
+               $this->addAccessInfo($labPdf->getVersionInfo())->accessLog($labPdf->getPathInCacheStorage(), $accessTime);
             }
             return $outputPdf;
         }
 
-        $this->accessLog(pathinfo($this->getFileName())['filename'].'.'.$format);
+        $this->accessLog(pathinfo($this->getFileName())['filename'].'.'.$format, $accessTime);
         return $this->getData($format);
     }
 
