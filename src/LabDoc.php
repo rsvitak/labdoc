@@ -128,6 +128,9 @@ abstract class LabDoc {
         self::$defaultProvider = $p;
     }
 
+    abstract public function getDefaultFileName();
+
+    abstract public function getDefaultAccessLogInfo();
 
     abstract public function getData(string $format);
 
@@ -158,6 +161,7 @@ abstract class LabDoc {
             }
         }
         $this->addAccessInfo($accessInfo);
+        $this->addAccessInfo($this->getDefaultAccessLogInfo());
 
         if (in_array($format, ['pdf', 'updf', 'unsigned-pdf', 'pdf-unsigned'])) {
             $labPdf=new LabPdf($this);

@@ -36,6 +36,10 @@ class LabTestRequestDoc extends LabDoc {
         return $this->getFilenameSafeString(implode('_', $filenameSegments).'.pdf', false);
     }
 
+    public function getDefaultAccessLogInfo() {
+       return 'do_id='.implode(',', $this->lab_test_request->get_do_id()).'&do_file='.implode(',', $this->getDoFiles());
+    }
+
     public function setCreatedBy($createdBy) {
        $this->createdBy=$createdBy;
        return $this;

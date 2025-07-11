@@ -9,6 +9,7 @@ class LabTestResultDoc extends LabDoc {
     private $xpath=null;
     private $datdu=null;
     private $hcContractId=null;
+    private $accessLogDefaultInfo='';
 
     private $pmZip;
     private $pmATitle;
@@ -39,6 +40,7 @@ class LabTestResultDoc extends LabDoc {
             $this->pmExpertise=$labTestResult->getDepartment()->getExpertise();
             $this->pmCompany=$this->getDomain()=='CTL' ? 'CITYLAB s.r.o' : 'Lab In - Institut laboratorní medicíny, s.r.o.'; //FIXME!!!!!
             $this->clientBornDate=$labTestResult->getBornDate();
+            $this->accessLogDefaultInfo='id='.$labTestResult->getId().'&legacy_key='.$labTestResult->getLegacyKey();
         } elseif ($class_name=='lwv') { //LABWEB
             $lwv=$labTestResult;
             $this->setDomain($lwv->get_domain());
@@ -64,6 +66,7 @@ class LabTestResultDoc extends LabDoc {
             $this->pmICZ=$co_data['CO_ICZ'];
             $this->pmExpertise=$co_data['CO_ODB'];
             $this->clientBornDate=new \DateTime($lwv->get_attr('XM_PANAR'));
+            $this->accessLogDefaultInfo='xm_key='.$lwv->get_attr('XM_KEY');
         } else throw new \Exception('Unsupported data lab test result data source');
         if (preg_match('/\d{5}/', $this->pmZip)) $this->pmZip=substr($this->pmZip, 0, 3).' '.substr($this->pmZip, 3); //formt ZIP into PSC in case of 5 digits format
 
@@ -96,6 +99,10 @@ class LabTestResultDoc extends LabDoc {
         //preparing PDF version of the XM_XHTML
         $filename=$id_soubor.'_'.$name.'_'.$surname.'_'.($this->hcContractId).'_'.($this->datdu->format('Ymd_Hi')).'.pdf';
         return $this->getFilenameSafeString($filename, false);
+    }
+
+    public function getDefaultAccessLogInfo() {
+       return $this->accessLogDefaultInfo;
     }
 
     public function getData(string $format) {
