@@ -159,7 +159,7 @@ abstract class LabDoc {
            $accessInfo='?userProvider=N/A';
         }
         $this->addAccessInfo($accessInfo);
-        $this->addAccessInfo($optionalAccessInfo);
+        if ($optionalAccessInfo!==null) $this->addAccessInfo($optionalAccessInfo);
         $this->addAccessInfo($this->getDefaultAccessLogInfo());
 
         if (in_array($format, ['pdf', 'updf', 'unsigned-pdf', 'pdf-unsigned'])) {
