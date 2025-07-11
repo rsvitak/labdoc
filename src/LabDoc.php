@@ -145,22 +145,21 @@ abstract class LabDoc {
         file_put_contents($accessLogFile, $accessLogRecord, FILE_APPEND);
     }
 
-    public function getOutput($format='pdf', $accessInfo=null) {
+    public function getOutput($format='pdf', $optionalAccessInfo=null) {
         $accessTime=new \DateTime(null, new \DateTimeZone('Europe/Prague'));
         $format=strtolower(trim($format));
-        if ($accessInfo===null) {
-            try {
-                if (defined('APPLICATION_PATH')) {
-                    $accessInfo='is=labweb'.(\php_sapi_name()!='cli' ? '&username='.\get_fir().'.'.\get_username().'&guid='.\get_guid().'&remote_addr='.$_SERVER['REMOTE_ADDR'] : '&user='.$_SERVER['USER']);
-                } else {
-                    $user=(self::$defaultProvider) ? self::$defaultProvider->getUser() : null;
-                    $accessInfo='is=LabIs'.(\php_sapi_name()!='cli' ? '&username='.($user ? $user->getDomain()->getId().'.'.$user->getNickName().'&id='.$user->getId().'&remote_addr='.$_SERVER['REMOTE_ADDR'] : '') : '&user='.$_SERVER['user']);
-                }
-            } catch (\Throwable $t) {
-               $accessInfo='?userProvider=N/A';
+        try {
+            if (defined('APPLICATION_PATH')) {
+                $accessInfo='is=labweb'.(\php_sapi_name()!='cli' ? '&username='.\get_fir().'.'.\get_username().'&guid='.\get_guid().'&remote_addr='.$_SERVER['REMOTE_ADDR'] : '&user='.$_SERVER['USER']);
+            } else {
+                $user=(self::$defaultProvider) ? self::$defaultProvider->getUser() : null;
+                $accessInfo='is=LabIs'.(\php_sapi_name()!='cli' ? '&username='.($user ? $user->getDomain()->getId().'.'.$user->getNickName().'&id='.$user->getId().'&remote_addr='.$_SERVER['REMOTE_ADDR'] : '') : '&user='.$_SERVER['user']);
             }
+        } catch (\Throwable $t) {
+           $accessInfo='?userProvider=N/A';
         }
         $this->addAccessInfo($accessInfo);
+        $this->addAccessInfo($optionalAccessInfo);
         $this->addAccessInfo($this->getDefaultAccessLogInfo());
 
         if (in_array($format, ['pdf', 'updf', 'unsigned-pdf', 'pdf-unsigned'])) {
