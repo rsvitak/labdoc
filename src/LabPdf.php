@@ -50,7 +50,7 @@ class LabPdf extends \TCPDF {
             break;
 
         default: 
-            $this->setTitle('Laboratorní dokument');
+            $this->setTitle($this->labDoc->getTitle());
             break;
         }//switch
     }

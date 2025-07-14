@@ -70,6 +70,7 @@ abstract class LabDoc {
     private $fileName;
     private $baseDate;
     private $accessInfo;
+    private $title='Dokument laboratoře';
     static private $defaultProvider;
 
     public function getDomain() : string {
@@ -108,6 +109,15 @@ abstract class LabDoc {
         return $this;
     }
 
+    public function getTitle() : string {
+        return $this->title;
+    }
+
+    public function setTitle(string $title) {
+        $this->title=$title;
+        return $this;
+    }
+
     public function getAccessInfo() : string {
         return $this->accessInfo;
     }
@@ -118,7 +128,7 @@ abstract class LabDoc {
     }
     
     public function addAccessInfo(string $accessInfo) {
-        $this->setAccessInfo($this->accessInfo===null ? $accessInfo : $this->getAccessInfo().'&'.$accessInfo);
+        if (!empty($accessInfo)) $this->setAccessInfo($this->accessInfo===null ? $accessInfo : $this->getAccessInfo().'&'.$accessInfo);
         return $this;
     }
 
